@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S.Tech Waterproofing Company</title>
+<style>
+body {
+  font-family: monospace;
+  background: #f0f4f8;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+  transition: background 0.3s ease;
+}
+
+h2 {
+  text-align: center;
+  color: #0077b6;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+textarea {
+  width: 100%;
+  height: 250px;
+  font-size: 16px;
+  padding: 15px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  resize: none;
+  outline: none;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+textarea:focus {
+  border-color: #0077b6;
+  box-shadow: 0 6px 10px rgba(0,119,182,0.15);
+}
+
+button {
+  flex: 1;
+  padding: 14px;
+  margin: 6px 0;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 12px;
+  border: none;
+  color: #fff;
+  background: #0077b6;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+button:hover {
+  background: #0096d6;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+}
+
+.flex-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+#extraButtons button {
+  background: #28a745;
+}
+#extraButtons button:hover {
+  background: #3ecf6f;
+}
+
+#notebook {
+  white-space: pre-wrap;
+  border-radius: 12px;
+  border: 2px solid #ccc;
+  padding: 15px;
+  margin-top: 10px;
+  display: none;
+  background: #ffffff;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: all 0.4s ease;
+}
+
+#balanceDiv {
+  margin-top: 12px;
+  font-weight: bold;
+  font-size: 18px;
+  text-align: center;
+  color: #0077b6;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 480px){
+  textarea { height: 180px; font-size: 15px; }
+  button { font-size: 14px; padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<h2>S.Tech Waterproofing Company</h2>
+
+<textarea id="entry" placeholder=""></textarea>
+
+<div class="flex-row">
+  <button onclick="prepareSave()">Save</button>
+  <button id="showBtn" onclick="toggleNotebook()">Show Data</button>
+</div>
+
+<div id="extraButtons" style="display:none;" class="flex-row">
+  <button onclick="editData()">Edit Data</button>
+  <button onclick="copyData()">Copy Data</button>
+  <button onclick="clearData()">Clear All Data</button>
+</div>
+
+<div id="balanceDiv">Balance: <span id="balance">0</span></div>
+<div id="notebook"></div>
+
+<script>
+// Today's date
+function today(){
+  let d=new Date();
+  return d.getDate()+"-"+(d.getMonth()+1)+"-"+d.getFullYear();
+}
+
+// Clean + / - numbers spacing at start of line
+function cleanNumbers(text){
+  return text.replace(/^([+-])\s+(\d+)/gm, '$1$2');
+}
+
+// Detect names (comma separated)
+function detectNames(text){
+  let lines=text.split("\n");
+  let names=[];
+  lines.forEach(line=>{
+    if(line.includes(",")){
+      line.split(",").forEach(n=>{
+        n=n.trim();
+        if(n.length>0) names.push(n);
+      });
+    }
+  });
+  return names;
+}
+
+// Large prompt popup function
+function promptLargeText(title, text){
+  return new Promise(resolve=>{
+    let div=document.createElement("div");
+    div.style.position="fixed";
+    div.style.top="0"; div.style.left="0";
+    div.style.width="100%"; div.style.height="100%";
+    div.style.background="rgba(0,0,0,0.6)";
+    div.style.display="flex"; div.style.justifyContent="center"; div.style.alignItems="center";
+    div.style.zIndex="3000";
+
+    let inner=document.createElement("div");
+    inner.style.background="#fff"; inner.style.padding="20px";
+    inner.style.borderRadius="12px"; inner.style.width="90%"; inner.style.maxWidth="500px";
+    inner.style.display="flex"; inner.style.flexDirection="column";
+
+    let h=document.createElement("h3");
+    h.innerText=title;
+    h.style.marginBottom="10px";
+    inner.appendChild(h);
+
+    let ta=document.createElement("textarea");
+    ta.value=text;
+    ta.style.height="300px";
+    ta.style.resize="vertical";
+    ta.style.padding="10px";
+    ta.style.fontSize="16px";
+    ta.style.border="1px solid #ccc";
+    ta.style.borderRadius="8px";
+    ta.style.marginBottom="10px";
+    inner.appendChild(ta);
+
+    let btnDiv=document.createElement("div");
+    btnDiv.style.display="flex"; btnDiv.style.justifyContent="space-between";
+
+    let okBtn=document.createElement("button");
+    okBtn.innerText="OK"; okBtn.onclick=function(){
+      document.body.removeChild(div);
+      resolve(ta.value);
+    };
+
+    let cancelBtn=document.createElement("button");
+    cancelBtn.innerText="Cancel"; cancelBtn.onclick=function(){
+      document.body.removeChild(div);
+      resolve(null);
+    };
+
+    btnDiv.appendChild(okBtn);
+    btnDiv.appendChild(cancelBtn);
+    inner.appendChild(btnDiv);
+
+    div.appendChild(inner);
+    document.body.appendChild(div);
+  });
+}
+
+// Save entry
+async function prepareSave(){
+  let text=document.getElementById("entry").value.trim();
+  if(text===""){alert("Empty entry"); return;}
+  
+  text=cleanNumbers(text);
+  let names=detectNames(text);
+  if(names.length>0){
+    text+="\nLabour Count: "+names.length+" ( "+names.join(", ")+" )";
+  }
+
+  let finalEntry="DATE: "+today()+"\n"+text+"\n\n";
+
+  let edited = await promptLargeText("Final Note (editable before save):", finalEntry);
+  if(edited!==null){
+    saveEntry(edited);
+  }
+}
+
+// Save entry locally
+function saveEntry(data){
+  let old=localStorage.getItem("notebook")||"";
+  localStorage.setItem("notebook", old+data);
+  loadNotebook();
+  calculateBalance();
+  document.getElementById("entry").value="";
+}
+
+// Load notebook
+function loadNotebook(){
+  document.getElementById("notebook").innerText=localStorage.getItem("notebook")||"";
+}
+
+// Show/Hide notebook
+function toggleNotebook(){
+  let nb=document.getElementById("notebook");
+  let btn=document.getElementById("showBtn");
+  let extras=document.getElementById("extraButtons");
+  let entry=document.getElementById("entry");
+  let saveBtn=document.querySelector("button[onclick='prepareSave()']");
+  
+  if(nb.style.display=="none"){
+    entry.style.display="none"; saveBtn.style.display="none";
+    nb.style.display="block"; loadNotebook();
+    extras.style.display="flex"; btn.innerText="Hide Data";
+  }else{
+    nb.style.display="none";
+    entry.style.display="block"; saveBtn.style.display="block";
+    extras.style.display="none"; btn.innerText="Show Data";
+  }
+}
+
+// Calculate balance only for + / - numbers at line start
+function calculateBalance(){
+  let data=localStorage.getItem("notebook")||"";
+  let lines=data.split("\n");
+  let total=0;
+  lines.forEach(line=>{
+    let match=line.match(/^([+-]\d+)/);
+    if(match) total+=parseInt(match[1]);
+  });
+  document.getElementById("balance").innerText=(total>=0?total:("-"+Math.abs(total)));
+}
+
+// Copy all notebook data to clipboard
+function copyData(){
+  let data=localStorage.getItem("notebook")||"";
+  if(!data){alert("No data to copy!"); return;}
+  navigator.clipboard.writeText(data).then(()=>{
+    alert("Notebook copied! You can now paste it in a text file.");
+  }).catch(err=>{
+    alert("Copy failed: "+err);
+  });
+}
+
+// Edit data with large textarea
+function editData(){
+  let pass=prompt("Enter Password", "");
+  if(pass === "525252"){
+    document.getElementById("notebook").style.display = "none";
+    document.getElementById("extraButtons").style.display = "none";
+    document.getElementById("showBtn").style.display = "inline-block";
+
+    let entry = document.getElementById("entry");
+    entry.style.display = "block";
+    entry.value = localStorage.getItem("notebook") || "";
+    entry.style.height = "60vh";
+    entry.focus();
+
+    let saveBtn = document.querySelector("button[onclick='prepareSave()']");
+    saveBtn.innerText = "Save Edited Data";
+
+    saveBtn.onclick = function(){
+      localStorage.setItem("notebook", entry.value);
+      entry.value = "";
+      entry.style.height = "250px";
+      saveBtn.innerText = "Save";
+      saveBtn.onclick = prepareSave;
+      loadNotebook();
+      calculateBalance();
+      alert("Data saved successfully!");
+    };
+  } else { alert("Wrong Password"); }
+}
+
+// Clear all data
+function clearData(){
+  let pass=prompt("Enter Password", "");
+  if(pass==="525252"){
+    localStorage.removeItem("notebook");
+    document.getElementById("notebook").innerText="";
+    calculateBalance();
+  }else{alert("Wrong Password");}
+}
+
+// Initialize balance
+calculateBalance();
+</script>
+
+</body>
+</html>
